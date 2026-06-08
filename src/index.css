@@ -1,0 +1,177 @@
+/* ─────────────────────────────────────────────
+   DESIGN TOKENS — Cinematic Minimalism
+   Sourced from DESIGN.md / pyTan Antigravity Brief
+   ───────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --surface:                  #0d1515;
+  --surface-dim:              #0a1010;
+  --surface-container-lowest: #081010;
+  --surface-container-low:    #151d1d;
+  --surface-container:        #192121;
+  --surface-container-high:   #232b2c;
+  --surface-container-highest:#2e3637;
+
+  /* Primary — Electric Teal */
+  --primary:         #00f5ff;
+  --primary-dim:     #00dce5;
+  --on-primary:      #003739;
+  --primary-glow:    rgba(0, 245, 255, 0.15);
+  --primary-glow-md: rgba(0, 245, 255, 0.25);
+
+  /* Text */
+  --on-surface:         #dce4e4;
+  --on-surface-variant: #b9caca;
+  --on-surface-muted:   #6b7f80;
+
+  /* Borders */
+  --outline:         #849495;
+  --outline-variant: #3a494a;
+  --outline-dim:     #1e2a2b;
+
+  /* Semantic */
+  --color-success:        #4ade80;
+  --color-success-bg:     rgba(74, 222, 128, 0.08);
+  --color-success-border: rgba(74, 222, 128, 0.2);
+  --color-warning:        #fbbf24;
+  --color-warning-bg:     rgba(251, 191, 36, 0.08);
+  --color-warning-border: rgba(251, 191, 36, 0.2);
+  --color-error:          #f87171;
+  --color-error-bg:       rgba(248, 113, 113, 0.08);
+  --color-error-border:   rgba(248, 113, 113, 0.2);
+  --color-exception:      #a78bfa;
+  --color-exception-bg:   rgba(167, 139, 250, 0.08);
+  --color-exception-border:rgba(167, 139, 250, 0.2);
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* Radius */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--on-surface);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--outline); }
+
+/* ── Base inputs ── */
+input, select, textarea {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--on-surface);
+  background: var(--surface-container-low);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus {
+  border-color: var(--primary-dim);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+input::placeholder { color: var(--on-surface-muted); }
+select { cursor: pointer; }
+select option { background: var(--surface-container); }
+
+/* ── Buttons ── */
+button { font-family: var(--font-sans); cursor: pointer; border: none; outline: none; }
+
+/* ── Animations ── */
+@keyframes pulse-teal {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--primary-glow-md); }
+  50%       { opacity: 0.5; box-shadow: 0 0 20px var(--primary-glow-md); }
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.8); }
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shield-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(0,245,255,0.4)); }
+  50%       { filter: drop-shadow(0 0 20px rgba(0,245,255,0.7)); }
+}
+
+@keyframes row-flash {
+  0%   { background: var(--primary-glow); }
+  100% { background: transparent; }
+}
+
+@keyframes counter-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--primary-glow); }
+  50%       { box-shadow: 0 0 0 6px transparent; }
+}
+
+/* ── Utility ── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.fade-up { animation: fade-up 0.4s ease both; }
+.fade-up-delay-1 { animation: fade-up 0.4s 0.05s ease both; }
+.fade-up-delay-2 { animation: fade-up 0.4s 0.1s ease both; }
+.fade-up-delay-3 { animation: fade-up 0.4s 0.15s ease both; }

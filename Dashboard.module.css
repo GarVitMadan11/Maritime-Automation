@@ -1,0 +1,59 @@
+.layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Main column ── */
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Feed + terminal row ── */
+.feedRow {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.feedCol {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminalCol {
+  height: 440px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Detail panel ── */
+.detail {
+  width: 0;
+  overflow: hidden;
+  border-left: 0 solid var(--outline-variant);
+  background: var(--surface-container-low);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-left-width 0.25s ease;
+  flex-shrink: 0;
+}
+
+.detailOpen {
+  width: 360px;
+  border-left-width: 1px;
+}
