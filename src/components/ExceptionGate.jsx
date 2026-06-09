@@ -2,14 +2,14 @@ import { useState } from 'react'
 
 function JsonViewer({ record }) {
   const payload = {
-    pipeline_run_id: record.id,
-    vessel_name: record.vessel,
-    container_id: record.container ?? null,
-    free_time_deadline: record.deadline ?? 'Flagged for Human Review',
-    confidence_score: record.confidence ?? null,
-    reason: record.reason ?? null,
-    validation_failures: record.failures ?? [],
-    status: 'Pending Human Review',
+    document_id: record.id,
+    vessel: record.vessel,
+    container_number: record.container ?? null,
+    last_free_day: record.deadline ?? 'Flagged for Manual Review',
+    data_extraction_confidence: record.confidence ?? null,
+    exception_reason: record.reason ?? null,
+    document_discrepancies: record.failures ?? [],
+    status: 'Pending Manual Review',
   }
   const lines = JSON.stringify(payload, null, 2).split('\n')
 
@@ -56,10 +56,10 @@ export function ExceptionGate({ exceptions, onResolve, onDismiss }) {
       padding: '28px 32px',
     }}>
       <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--on-surface)', marginBottom: 6 }}>
-        System Exception Logs &amp; Human Validation Gate
+        Demurrage Exception Desk &amp; Auditing Gate
       </h2>
       <p style={{ fontSize: 13, color: 'var(--on-surface-muted)' }}>
-        AI-flagged discrepancies requiring cognitive intervention.
+        Discrepancies identified in shipping documents requiring manual review.
       </p>
       <div style={{
         marginTop: 24, padding: '20px 24px', textAlign: 'center',
@@ -69,7 +69,7 @@ export function ExceptionGate({ exceptions, onResolve, onDismiss }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
       }}>
         <i className="ti ti-circle-check" style={{ fontSize: 18 }} />
-        All records validated — no exceptions in queue
+        All demurrage risks mitigated — exception queue clear
       </div>
     </div>
   )
@@ -87,10 +87,10 @@ export function ExceptionGate({ exceptions, onResolve, onDismiss }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--on-surface)', marginBottom: 6 }}>
-            System Exception Logs &amp; Human Validation Gate
+            Demurrage Exception Desk &amp; Auditing Gate
           </h2>
           <p style={{ fontSize: 13, color: 'var(--on-surface-muted)' }}>
-            AI-flagged discrepancies requiring cognitive intervention.
+            Discrepancies identified in shipping documents requiring manual review.
           </p>
         </div>
         {exceptions.length > 1 && (
@@ -182,7 +182,7 @@ export function ExceptionGate({ exceptions, onResolve, onDismiss }) {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--primary-dim)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-              Live_Extraction_Buffer
+              Document Data Extraction Schema
             </span>
             <i className="ti ti-code" style={{ fontSize: 14, color: 'var(--on-surface-muted)' }} />
           </div>
@@ -208,7 +208,7 @@ export function ExceptionGate({ exceptions, onResolve, onDismiss }) {
               onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
-              Confirm Fix
+              Approve &amp; Release
             </button>
             <button
               onClick={() => { onDismiss(current.id); setIdx(i => Math.max(0, i - 1)) }}
@@ -221,7 +221,7 @@ export function ExceptionGate({ exceptions, onResolve, onDismiss }) {
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--outline)'; e.currentTarget.style.color = 'var(--on-surface)' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--outline-variant)'; e.currentTarget.style.color = 'var(--on-surface-variant)' }}
             >
-              Dismiss
+              Reject &amp; Archive
             </button>
           </div>
         </div>

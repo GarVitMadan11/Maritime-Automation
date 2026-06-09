@@ -1,23 +1,22 @@
 const NODES = [
-  { icon: 'ti-mail',          label: 'IMAP Inbox Intercept',      status: 'ok', latency: '12ms' },
-  { icon: 'ti-scan',          label: 'Regex Extraction Engine',    status: 'ok', latency: '3ms'  },
-  { icon: 'ti-shield-check',  label: 'ISO 6346 Validation Gate',  status: 'ok', latency: '1ms'  },
-  { icon: 'ti-route',         label: 'JSONL Queue Router',        status: 'ok', latency: '2ms'  },
+  { icon: 'ti-mail',          label: 'Email Inbox Listener (IMAP)', status: 'ok', latency: '12ms' },
+  { icon: 'ti-scan',          label: 'Document OCR & Parser Engine', status: 'ok', latency: '3ms'  },
+  { icon: 'ti-shield-check',  label: 'Container Standards Auditor', status: 'ok', latency: '1ms'  },
+  { icon: 'ti-route',         label: 'Dispatch Queue Router',       status: 'ok', latency: '2ms'  },
 ]
 
 const METRICS = [
-  { label: 'Pipeline Uptime',        value: '99.8%',   color: 'var(--color-success)' },
-  { label: 'Avg. Processing Time',   value: '18ms',    color: 'var(--primary-dim)' },
-  { label: 'Emails Ingested (MTD)',  value: '5,241',   color: 'var(--on-surface)' },
-
+  { label: 'Parser Uptime',                  value: '99.8%',   color: 'var(--color-success)' },
+  { label: 'Avg. Extraction Speed',          value: '18ms',    color: 'var(--primary-dim)' },
+  { label: 'Arrival Notices Audited (MTD)',  value: '5,241',   color: 'var(--on-surface)' },
 ]
 
 export function Health() {
   return (
     <div style={{ overflowY: 'auto', padding: 24, height: '100%' }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--on-surface)', marginBottom: 4 }}>System Health</h1>
-        <p style={{ fontSize: 13, color: 'var(--on-surface-muted)' }}>Real-time pipeline node diagnostics and performance metrics.</p>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--on-surface)', marginBottom: 4 }}>System Diagnostics</h1>
+        <p style={{ fontSize: 13, color: 'var(--on-surface-muted)' }}>Real-time parsing engine diagnostics and queue performance metrics.</p>
       </div>
 
       {/* System status banner */}
@@ -37,10 +36,10 @@ export function Health() {
         }} />
         <div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-success)', marginBottom: 2 }}>
-            All System Nodes Operational
+            All Ingestion Parsers Operational
           </div>
           <div style={{ fontSize: 12, color: 'var(--on-surface-muted)' }}>
-            99.8% Core Pipeline Efficiency — No incidents in the last 30 days
+            99.8% Core Parsing Efficiency — Zero lost notices in the last 30 days
           </div>
         </div>
       </div>
@@ -76,7 +75,7 @@ export function Health() {
         }}>
           <i className="ti ti-topology-star" style={{ fontSize: 15, color: 'var(--primary-dim)' }} />
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>
-            Pipeline Nodes
+            Data Ingestion Engine Nodes
           </span>
         </div>
         {NODES.map((n, i) => (

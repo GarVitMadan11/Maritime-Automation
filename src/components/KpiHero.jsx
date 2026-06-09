@@ -17,10 +17,10 @@ function AnimatedNumber({ target }) {
 
 export function KpiHero({ stats }) {
   const chips = [
-    { label: 'Total Processed', value: stats.total,      color: 'var(--on-surface)',      icon: 'ti-file-invoice' },
-    { label: 'Draft Ready',     value: stats.clean,      color: 'var(--color-success)',   icon: 'ti-circle-check' },
-    { label: 'Exceptions',      value: stats.exceptions, color: 'var(--color-exception)', icon: 'ti-alert-triangle' },
-    { label: 'Critical',        value: stats.critical,   color: 'var(--color-error)',      icon: 'ti-flame' },
+    { label: 'Total Notices Audited', value: stats.total,      color: 'var(--on-surface)',      icon: 'ti-file-invoice' },
+    { label: 'Auto-Approved',         value: stats.clean,      color: 'var(--color-success)',   icon: 'ti-circle-check' },
+    { label: 'Pending Exceptions',    value: stats.exceptions, color: 'var(--color-exception)', icon: 'ti-alert-triangle' },
+    { label: 'At Risk (<3 Days)',     value: stats.critical,   color: 'var(--color-error)',      icon: 'ti-flame' },
   ]
 
   return (
@@ -31,6 +31,7 @@ export function KpiHero({ stats }) {
       padding: '28px 32px',
       position: 'relative',
       overflow: 'hidden',
+      flexShrink: 0,
     }}>
       {/* Subtle teal gradient top-left */}
       <div style={{

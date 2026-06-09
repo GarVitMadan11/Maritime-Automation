@@ -5,9 +5,9 @@ import { Logs }      from './pages/Logs.jsx'
 import { Health }    from './pages/Health.jsx'
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'ti-layout-dashboard' },
-  { id: 'logs',      label: 'Logs',      icon: 'ti-file-description' },
-  { id: 'health',    label: 'Health',    icon: 'ti-activity-heartbeat' },
+  { id: 'dashboard', label: 'Dashboard',          icon: 'ti-layout-dashboard' },
+  { id: 'logs',      label: 'Audit Log',          icon: 'ti-file-description' },
+  { id: 'health',    label: 'System Diagnostics', icon: 'ti-activity-heartbeat' },
 ]
 
 export default function App() {

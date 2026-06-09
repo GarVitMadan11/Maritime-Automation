@@ -66,7 +66,7 @@ export function PipelineTerminal({ onIngest }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <i className="ti ti-terminal-2" style={{ fontSize: 15, color: 'var(--primary-dim)' }} />
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>
-            Pipeline Terminal
+            Document Ingestion Port
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -99,7 +99,7 @@ export function PipelineTerminal({ onIngest }) {
       }}>
         {logs.length === 0 && !running && (
           <span style={{ color: '#3a5050' }}>
-            {`// `}Awaiting pipeline trigger<span style={{ animation: 'blink-cursor 1.2s step-end infinite', display: 'inline-block', marginLeft: 2 }}>▋</span>
+            {`// `}Awaiting incoming document email…<span style={{ animation: 'blink-cursor 1.2s step-end infinite', display: 'inline-block', marginLeft: 2 }}>▋</span>
           </span>
         )}
         {logs.map((l, i) => (
@@ -137,7 +137,7 @@ export function PipelineTerminal({ onIngest }) {
         >
           <i className={`ti ${running ? 'ti-loader-2' : 'ti-player-play-filled'}`}
             style={{ fontSize: 13, animation: running ? 'spin 1s linear infinite' : 'none' }} />
-          {running ? 'Processing…' : 'Simulate Arrival Notice →'}
+          {running ? 'Processing…' : 'Simulate Incoming Arrival Notice →'}
         </button>
       </div>
     </div>

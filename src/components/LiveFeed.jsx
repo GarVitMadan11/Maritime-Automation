@@ -1,10 +1,10 @@
 import { useState } from 'react'
 
 const STATUS_META = {
-  clean:    { label: 'Processed',  dot: 'var(--primary-dim)',    text: 'var(--primary-dim)' },
-  urgent:   { label: 'Urgent',     dot: 'var(--color-warning)',  text: 'var(--color-warning)' },
-  critical: { label: 'Critical',   dot: 'var(--color-error)',    text: 'var(--color-error)' },
-  exception:{ label: 'Exception',  dot: 'var(--color-exception)',text: 'var(--color-exception)' },
+  clean:    { label: 'Auto-Approved',  dot: 'var(--primary-dim)',    text: 'var(--primary-dim)' },
+  urgent:   { label: 'Urgent (<3d)',   dot: 'var(--color-warning)',  text: 'var(--color-warning)' },
+  critical: { label: 'At Risk (<2d)',  dot: 'var(--color-error)',    text: 'var(--color-error)' },
+  exception:{ label: 'Exception',      dot: 'var(--color-exception)',text: 'var(--color-exception)' },
 }
 
 function fmtTime(iso) {
@@ -59,17 +59,17 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
               fontSize: 13, color: 'var(--on-surface-muted)', pointerEvents: 'none',
             }} />
             <input
-              type="text" placeholder="Search vessel, container, POD…"
+              type="text" placeholder="Search vessel, container number, port…"
               value={search} onChange={e => onSearchChange(e.target.value)}
               style={{ width: '100%', paddingLeft: 32, paddingRight: 12 }}
             />
           </div>
           <select value={filter} onChange={e => onFilterChange(e.target.value)}
             style={{ minWidth: 130 }}>
-            <option value="all">All statuses</option>
-            <option value="clean">Processed</option>
+            <option value="all">All Statuses</option>
+            <option value="clean">Auto-Approved</option>
             <option value="urgent">Urgent</option>
-            <option value="critical">Critical</option>
+            <option value="critical">At Risk</option>
             <option value="exception">Exception</option>
           </select>
         </div>
@@ -93,7 +93,7 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
         padding: '8px 20px', background: 'var(--surface-container)',
         borderBottom: '1px solid var(--outline-dim)',
       }}>
-        {['Timestamp', 'Sender / Document', 'Status', 'Accuracy'].map(h => (
+        {['Timestamp', 'Carrier Document', 'Status', 'Confidence Rating'].map(h => (
           <span key={h} style={{
             fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
             color: 'var(--on-surface-muted)', textTransform: 'uppercase',

@@ -65,8 +65,8 @@ export const SEED_RECORDS = [
     doc: "Evergreen Arrival Notice",
     accuracy: 42,
     failures: [
-      "container_id: 'BADID999' fails ISO 6346 format check",
-      "free_time_deadline: field not found — CRITICAL",
+      "container_number: 'BADID999' invalid (fails ISO 6346 standard check)",
+      "last_free_day: not detected in document — CRITICAL",
     ],
     ref: "DOC_5566778",
     confidence: 0.42,
@@ -85,8 +85,8 @@ export const SEED_RECORDS = [
     doc: "ZIM Cargo Notice",
     accuracy: 31,
     failures: [
-      "container_id: field not found in email body",
-      "free_time_deadline: field not found — CRITICAL",
+      "container_number: field not found in email message body",
+      "last_free_day: not detected in document — CRITICAL",
     ],
     ref: "DOC_9981203",
     confidence: 0.31,
@@ -122,8 +122,8 @@ export const DEMO_EMAILS = [
     doc: "Yang Ming Delivery Order",
     accuracy: 38,
     failures: [
-      "container_id: 'YMxx-MISSING' fails ISO 6346 format",
-      "free_time_deadline: not found — CRITICAL",
+      "container_number: 'YMxx-MISSING' invalid (fails ISO 6346 standard check)",
+      "last_free_day: not detected in document — CRITICAL",
     ],
     ref: "DOC_7743901",
     confidence: 0.38,
@@ -158,13 +158,13 @@ export const CARRIER_COLORS = {
 
 // ── Pipeline Simulation Steps ────────────────────────────────────────────────
 export const buildPipelineSteps = (email) => [
-  { icon: "ti-wifi",         color: "#00dce5", msg: `Initiating SSL handshake → imap.gmail.com:993`,             ms: 350 },
-  { icon: "ti-lock",         color: "#00dce5", msg: `Authenticated. INBOX selected — ${email.from}`,             ms: 450 },
-  { icon: "ti-mail-opened",  color: "#b9caca", msg: `Unread match: "${email.subject}"`,                          ms: 550 },
-  { icon: "ti-scan",         color: "#b9caca", msg: `Extracting: vessel_name, container_id, pod, free_time…`,    ms: 600 },
+  { icon: "ti-wifi",         color: "#00dce5", msg: `Connecting to freight mailbox (imap.gmail.com)…`,           ms: 350 },
+  { icon: "ti-lock",         color: "#00dce5", msg: `Monitoring INBOX for carrier arrival notices — ${email.from}`, ms: 450 },
+  { icon: "ti-mail-opened",  color: "#b9caca", msg: `New notice detected: "${email.subject}"`,                   ms: 550 },
+  { icon: "ti-scan",         color: "#b9caca", msg: `Parsing: Vessel, Container Number, POD, Last Free Day…`,    ms: 600 },
   { icon: "ti-shield-check", color: email.status === "exception" ? "#f87171" : "#4ade80",
     msg: email.status === "exception"
-      ? `Validation FAILED — ${email.failures?.length ?? 1} issue(s) — routing to EXCEPTION_QUEUE`
-      : `Validation passed — 4/4 fields confirmed — routing to DASHBOARD_QUEUE`,                                  ms: 700 },
-  { icon: "ti-circle-check", color: "#4ade80", msg: `Record ingested: ${new Date().toISOString().slice(0,19)}Z`, ms: 300 },
+      ? `Audit failed: Discrepancy detected → routing to EXCEPTION DESK`
+      : `Audit passed: Core LFD data points confirmed → auto-approved`,                                         ms: 700 },
+  { icon: "ti-circle-check", color: "#4ade80", msg: `LFD entry active: ${new Date().toISOString().slice(0,19)}Z`, ms: 300 },
 ];
