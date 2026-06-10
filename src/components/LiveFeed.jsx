@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const STATUS_META = {
   clean:    { label: 'Auto-Approved',  dot: 'var(--primary-dim)',    text: 'var(--primary-dim)' },
@@ -11,21 +11,36 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
-function StatusPill({ status }) {
+function StatusPill({ status, lfdAlert }) {
   const m = STATUS_META[status] ?? STATUS_META.clean
+  const isT0 = status === 'critical' && lfdAlert
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
       <span style={{
         width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-        background: m.dot,
+        background: isT0 ? 'var(--color-error)' : m.dot,
         animation: status === 'clean' ? 'none' : 'dot-blink 2s ease infinite',
       }} />
-      <span style={{ fontSize: 12, color: m.text }}>{m.label}</span>
+      <span style={{ fontSize: 12, color: isT0 ? 'var(--color-error)' : m.text, fontWeight: isT0 ? 700 : 400 }}>
+        {isT0 ? '🔴 T-0 LFD TODAY' : m.label}
+      </span>
     </span>
   )
 }
 
-export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, search, onSearchChange }) {
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < breakpoint)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [breakpoint])
+  return isMobile
+}
+
+export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, search, onSearchChange, isReplaying }) {
+  const isMobile = useIsMobile(640)
+
   const filtered = records.filter(r => {
     const matchFilter = filter === 'all' || r.status === filter
     const term = search.toLowerCase()
@@ -46,26 +61,26 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
       border: '1px solid var(--outline-variant)',
       borderRadius: 'var(--radius-lg)', overflow: 'hidden',
     }}>
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{
-        padding: '12px 20px', borderBottom: '1px solid var(--outline-dim)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+        padding: '12px 16px', borderBottom: '1px solid var(--outline-dim)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
       }}>
         {/* Controls */}
-        <div style={{ display: 'flex', gap: 8, flex: 1, minWidth: 200 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, flex: 1, minWidth: 0 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <i className="ti ti-search" style={{
               position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
               fontSize: 13, color: 'var(--on-surface-muted)', pointerEvents: 'none',
             }} />
             <input
-              type="text" placeholder="Search vessel, container number, port…"
+              type="text" placeholder="Search vessel, container, port…"
               value={search} onChange={e => onSearchChange(e.target.value)}
               style={{ width: '100%', paddingLeft: 32, paddingRight: 12 }}
             />
           </div>
           <select value={filter} onChange={e => onFilterChange(e.target.value)}
-            style={{ minWidth: 130 }}>
+            style={{ minWidth: isMobile ? '100%' : 130 }}>
             <option value="all">All Statuses</option>
             <option value="clean">Auto-Approved</option>
             <option value="urgent">Urgent</option>
@@ -73,35 +88,43 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
             <option value="exception">Exception</option>
           </select>
         </div>
-        {/* Live badge */}
+
+        {/* Live / Replay badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <span style={{
-            width: 7, height: 7, borderRadius: '50%', background: 'var(--primary)',
+            width: 7, height: 7, borderRadius: '50%',
+            background: isReplaying ? 'var(--color-warning)' : 'var(--primary)',
             animation: 'dot-blink 1.5s ease infinite',
-            boxShadow: '0 0 6px var(--primary)',
+            boxShadow: isReplaying ? '0 0 6px var(--color-warning)' : '0 0 6px var(--primary)',
             display: 'inline-block',
           }} />
-          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--on-surface-variant)', textTransform: 'uppercase' }}>
-            Live Updates
+          <span style={{
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.1em',
+            color: isReplaying ? 'var(--color-warning)' : 'var(--on-surface-variant)',
+            textTransform: 'uppercase',
+          }}>
+            {isReplaying ? 'Replay Mode' : 'Live Updates'}
           </span>
         </div>
       </div>
 
-      {/* Column headers */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: COL, gap: 12,
-        padding: '8px 20px', background: 'var(--surface-container)',
-        borderBottom: '1px solid var(--outline-dim)',
-      }}>
-        {['Timestamp', 'Carrier Document', 'Status', 'Confidence Rating'].map(h => (
-          <span key={h} style={{
-            fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-            color: 'var(--on-surface-muted)', textTransform: 'uppercase',
-          }}>{h}</span>
-        ))}
-      </div>
+      {/* ── Column headers (desktop only) ── */}
+      {!isMobile && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: COL, gap: 12,
+          padding: '8px 20px', background: 'var(--surface-container)',
+          borderBottom: '1px solid var(--outline-dim)',
+        }}>
+          {['Timestamp', 'Carrier Document', 'Status', 'Confidence Rating'].map(h => (
+            <span key={h} style={{
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+              color: 'var(--on-surface-muted)', textTransform: 'uppercase',
+            }}>{h}</span>
+          ))}
+        </div>
+      )}
 
-      {/* Rows */}
+      {/* ── Rows ── */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {filtered.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--on-surface-muted)', fontSize: 13 }}>
@@ -112,6 +135,48 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
             const isSelected = selected?.id === r.id
             const acc = r.accuracy ?? 100
             const accColor = r.status === 'exception' ? 'var(--color-exception)' : 'var(--primary-dim)'
+
+            if (isMobile) {
+              // ── Mobile card layout ──────────────────────────────────────
+              return (
+                <div
+                  key={r.id}
+                  onClick={() => onSelect(isSelected ? null : r)}
+                  style={{
+                    padding: '12px 16px',
+                    background: isSelected ? 'var(--surface-container)' : 'transparent',
+                    borderBottom: '1px solid var(--outline-dim)',
+                    borderLeft: isSelected ? '2px solid var(--primary)' : '2px solid transparent',
+                    cursor: 'pointer', transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--surface-container)' }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+                >
+                  {/* Top row: doc name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <i className={`ti ${r.status === 'exception' ? 'ti-file-alert' : 'ti-file-text'}`}
+                      style={{ fontSize: 14, color: r.status === 'exception' ? 'var(--color-exception)' : 'var(--on-surface-muted)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: 'var(--on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.doc}
+                    </span>
+                  </div>
+                  {/* Bottom row: status | confidence | timestamp */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <StatusPill status={r.status} lfdAlert={r.lfdAlert} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: accColor, fontFamily: 'var(--font-mono)' }}>
+                        {acc}%
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--on-surface-muted)', fontFamily: 'var(--font-mono)' }}>
+                        {fmtTime(r.ts)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
+            // ── Desktop grid row ────────────────────────────────────────
             return (
               <div
                 key={r.id}
@@ -140,7 +205,7 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
                   </span>
                 </div>
                 {/* Status */}
-                <StatusPill status={r.status} />
+                <StatusPill status={r.status} lfdAlert={r.lfdAlert} />
                 {/* Accuracy */}
                 <span style={{ fontSize: 13, fontWeight: 600, color: accColor, fontFamily: 'var(--font-mono)' }}>
                   {acc}%
@@ -151,9 +216,9 @@ export function LiveFeed({ records, selected, onSelect, filter, onFilterChange, 
         )}
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div style={{
-        padding: '8px 20px', borderTop: '1px solid var(--outline-dim)',
+        padding: '8px 16px', borderTop: '1px solid var(--outline-dim)',
         fontSize: 11, color: 'var(--on-surface-muted)',
         display: 'flex', justifyContent: 'space-between',
       }}>

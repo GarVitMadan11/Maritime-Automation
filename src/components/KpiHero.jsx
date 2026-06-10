@@ -15,7 +15,7 @@ function AnimatedNumber({ target }) {
   return <>{val}</>
 }
 
-export function KpiHero({ stats }) {
+export function KpiHero({ stats, clientName }) {
   const chips = [
     { label: 'Total Notices Audited', value: stats.total,      color: 'var(--on-surface)',      icon: 'ti-file-invoice' },
     { label: 'Auto-Approved',         value: stats.clean,      color: 'var(--color-success)',   icon: 'ti-circle-check' },
@@ -61,7 +61,9 @@ export function KpiHero({ stats }) {
 
           <p style={{ fontSize: 15, color: 'var(--on-surface-variant)', lineHeight: 1.6, maxWidth: 540 }}>
             <strong style={{ color: 'var(--on-surface)', fontWeight: 600 }}>5,000+ logistics emails</strong>{' '}
-            parsed this month.{' '}
+            parsed this month{clientName ? (
+              <> for <span style={{ color: 'var(--color-warning)', fontWeight: 700 }}>{clientName}</span></>
+            ) : null}.{' '}
             <span style={{ color: 'var(--primary-dim)', fontWeight: 600 }}>$0 incurred</span>{' '}
             in port demurrage fines.
           </p>
