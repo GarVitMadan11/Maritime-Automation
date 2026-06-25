@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { KpiHero }          from '../components/KpiHero.jsx'
-import { RoiCalculator }    from '../components/RoiCalculator.jsx'
-import { LiveFeed }         from '../components/LiveFeed.jsx'
-import { PipelineTerminal } from '../components/PipelineTerminal.jsx'
-import { ExceptionGate }    from '../components/ExceptionGate.jsx'
-import { RecordDetail }     from '../components/RecordDetail.jsx'
-import { useReplayFeed }    from '../hooks/useReplayFeed.js'
+import { KpiHero }            from '../components/KpiHero.jsx'
+import { RoiCalculator }      from '../components/RoiCalculator.jsx'
+import { LiveFeed }           from '../components/LiveFeed.jsx'
+import { PipelineTerminal }   from '../components/PipelineTerminal.jsx'
+import { ExceptionGate }      from '../components/ExceptionGate.jsx'
+import { RecordDetail }       from '../components/RecordDetail.jsx'
+import { DocumentDropZone }   from '../components/DocumentDropZone.jsx'
+import { useReplayFeed }      from '../hooks/useReplayFeed.js'
 
 export function Dashboard({ records, stats, clientName, onIngest, onResolve, onDismiss }) {
   const [selected, setSelected] = useState(null)
@@ -33,7 +34,7 @@ export function Dashboard({ records, stats, clientName, onIngest, onResolve, onD
         {/* GAP 1 — ROI Calculator */}
         <RoiCalculator />
 
-        {/* Live Feed + Terminal row */}
+        {/* Live Feed + Right sidebar (Drop Zone + Terminal) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' }}>
           <div style={{ minHeight: 400, display: 'flex', flexDirection: 'column' }}>
             <LiveFeed
@@ -47,8 +48,12 @@ export function Dashboard({ records, stats, clientName, onIngest, onResolve, onD
               isReplaying={isReplaying}
             />
           </div>
-          <div style={{ height: 440, display: 'flex', flexDirection: 'column' }}>
-            <PipelineTerminal onIngest={handleIngest} />
+          {/* Right column: Document Drop Zone + Pipeline Terminal stacked */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <DocumentDropZone onIngest={handleIngest} />
+            <div style={{ height: 380, display: 'flex', flexDirection: 'column' }}>
+              <PipelineTerminal onIngest={handleIngest} />
+            </div>
           </div>
         </div>
 

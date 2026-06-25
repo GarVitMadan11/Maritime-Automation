@@ -34,6 +34,12 @@ from email.header import decode_header
 from email.message import Message as EmailMessage
 from typing import Optional
 
+# Set terminal encoding to UTF-8 on Windows/environments with restrictive default encodings
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTION 1: CONFIGURATION & CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────

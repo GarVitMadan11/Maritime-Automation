@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 // ── Realistic seed data ─────────────────────────────────────────────────────
 const SEED_RECORDS = [
@@ -397,6 +397,363 @@ function DetailPanel({ record, onClose }) {
   );
 }
 
+// ── In-browser logistics field extractor (mirrors Python EXTRACTION_PATTERNS) ─
+function extractLogisticsFields(text) {
+  const patterns = {
+    vessel_name: [
+      /(?:Vessel(?:\s*Name)?|V\/V)\s*[:\-]\s*([A-Z0-9 \-]+?)(?:\n|,|;|\(|$)/im,
+    ],
+    container_id: [
+      /\b([A-Z]{4}\s?\d{6,7})\b/,
+    ],
+    port_of_discharge: [
+      /(?:Port\s*of\s*Discharge|POD|Discharge\s*Port)\s*[:\-]\s*([A-Z][A-Za-z\s,]+?)(?:\n|;|$)/im,
+    ],
+    free_time_deadline: [
+      /(?:Free\s*Time\s*(?:Expires?|Deadline|Expiry|Allowed\s*Until)|Free\s*Days\s*Until)\s*[:\-]\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2})/im,
+    ],
+  };
+
+  const result = {};
+  for (const [field, pats] of Object.entries(patterns)) {
+    let val = null;
+    for (const pat of pats) {
+      const m = text.match(pat);
+      if (m) {
+        val = m[1].trim();
+        if (field === "container_id") val = val.replace(/\s/g, "");
+        break;
+      }
+    }
+    result[field] = val;
+  }
+  return result;
+}
+
+function validateFields(fields) {
+  const failures = [];
+  const containerOk = fields.container_id && /^[A-Z]{4}\d{6,7}$/.test(fields.container_id);
+  if (!fields.container_id) failures.push("container_id: field not found in document");
+  else if (!containerOk) failures.push(`container_id: '${fields.container_id}' fails ISO 6346 format`);
+  if (!fields.free_time_deadline) failures.push("free_time_deadline: field not found — CRITICAL: demurrage exposure unknown");
+  return failures;
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return Math.ceil((d - Date.now()) / 86400000);
+}
+
+// ── Document Drop Zone ───────────────────────────────────────────────────────
+function DocumentDropZone({ onIngest }) {
+  const [dragging, setDragging] = useState(false);
+  const [phase, setPhase]       = useState("idle"); // idle | reading | analyzing | done | error
+  const [fileName, setFileName] = useState(null);
+  const [logLines, setLogLines] = useState([]);
+  const [result, setResult]     = useState(null);
+  const [open, setOpen]         = useState(false);
+  const inputRef = useRef(null);
+  const logRef   = useRef(null);
+
+  const appendLog = (icon, msg, color = "#A8D5B5") => {
+    setLogLines(prev => [...prev, { icon, msg, color }]);
+  };
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logLines]);
+
+  const analyzeText = useCallback(async (text, name) => {
+    setPhase("analyzing");
+    setLogLines([]);
+    setResult(null);
+
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+
+    appendLog("ti-file-text",     `Document loaded: ${name}`,                                   "#A8D5B5");
+    await delay(350);
+    appendLog("ti-scan",          "Running field extraction…",                                   "#A8D5B5");
+    await delay(500);
+
+    const fields = extractLogisticsFields(text);
+
+    appendLog("ti-ship",          `Vessel name       → ${fields.vessel_name       ?? "✗ not found"}`,  fields.vessel_name       ? "#A8D5B5" : "#F87171");
+    await delay(250);
+    appendLog("ti-box",           `Container ID      → ${fields.container_id      ?? "✗ not found"}`,  fields.container_id      ? "#A8D5B5" : "#F87171");
+    await delay(250);
+    appendLog("ti-anchor",        `Port of discharge → ${fields.port_of_discharge ?? "✗ not found"}`,  fields.port_of_discharge ? "#A8D5B5" : "#F87171");
+    await delay(250);
+    appendLog("ti-clock",         `Free time deadline→ ${fields.free_time_deadline ?? "✗ not found"}`, fields.free_time_deadline ? "#A8D5B5" : "#F87171");
+    await delay(400);
+
+    const failures = validateFields(fields);
+    const status = failures.length === 0 ? "clean" : "exception";
+
+    if (failures.length === 0) {
+      appendLog("ti-shield-check", "Validation PASSED — routing to dashboard queue", "#4ADE80");
+    } else {
+      appendLog("ti-shield-x",     `Validation FAILED (${failures.length} issue${failures.length > 1 ? "s" : ""}) — routing to exception queue`, "#F87171");
+    }
+    await delay(350);
+    appendLog("ti-check", "Record ingested: " + new Date().toISOString().slice(0, 19) + "Z", "#00F5FF");
+
+    const dl   = fields.free_time_deadline;
+    const days = daysUntil(dl);
+    const urgency = days === null ? null : days <= 2 ? "critical" : days <= 4 ? "urgent" : "clean";
+    const finalStatus = failures.length > 0 ? "exception" : (urgency ?? "clean");
+
+    const record = {
+      id:        `MDP-${Date.now().toString().slice(-8)}`,
+      ts:        new Date().toISOString(),
+      vessel:    fields.vessel_name    ?? null,
+      container: fields.container_id   ?? null,
+      pod:       fields.port_of_discharge ?? null,
+      deadline:  dl ?? null,
+      status:    finalStatus,
+      carrier:   guessCarrier(fields.container_id),
+      daysLeft:  days,
+      failures:  failures.length > 0 ? failures : undefined,
+      _sourceFile: name,
+    };
+
+    setResult(record);
+    setPhase("done");
+    onIngest(record);
+  }, [onIngest]);
+
+  function guessCarrier(cid) {
+    if (!cid) return "UNKNOWN";
+    const pfx = cid.slice(0, 4).toUpperCase();
+    const MAP = { MSCU: "MSC", MAEU: "MAERSK", CMAU: "CMA CGM", ONEU: "ONE", HLCU: "HAPAG-LLOYD", ZIMU: "ZIM", EGLV: "EVERGREEN" };
+    return MAP[pfx] ?? pfx;
+  }
+
+  const processFile = useCallback((file) => {
+    if (!file) return;
+    const allowed = ["text/plain", "message/rfc822", "application/octet-stream", ""];
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (!["txt", "eml", "csv", "log", "msg"].includes(ext)) {
+      setPhase("error");
+      setFileName(file.name);
+      setLogLines([{ icon: "ti-alert-circle", msg: `Unsupported file type: .${ext}. Please upload .txt or .eml files.`, color: "#F87171" }]);
+      return;
+    }
+    setFileName(file.name);
+    setPhase("reading");
+    setOpen(true);
+    const reader = new FileReader();
+    reader.onload = e => analyzeText(e.target.result, file.name);
+    reader.onerror = () => { setPhase("error"); setLogLines([{ icon: "ti-alert-circle", msg: "Could not read file.", color: "#F87171" }]); };
+    reader.readAsText(file);
+  }, [analyzeText]);
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    processFile(file);
+  }, [processFile]);
+
+  const onDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const onDragLeave = () => setDragging(false);
+  const onInputChange = (e) => processFile(e.target.files[0]);
+
+  const reset = () => {
+    setPhase("idle"); setFileName(null); setLogLines([]); setResult(null); setOpen(false);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const borderColor = dragging ? "#00F5FF" : phase === "done" ? (result?.status === "exception" ? "#A78BFA" : "#4ADE80") : phase === "error" ? "#F87171" : "#3A494A";
+  const bgColor     = dragging ? "rgba(0,245,255,0.05)" : "transparent";
+
+  return (
+    <div style={{
+      background: "var(--surface-container-low)",
+      border: `1.5px dashed ${borderColor}`,
+      borderRadius: 12,
+      overflow: "hidden",
+      transition: "border-color 0.25s, background 0.25s",
+    }}>
+      {/* Header toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 16px", background: "none", border: "none", cursor: "pointer",
+          color: "var(--on-surface)", fontSize: 13, fontWeight: 500,
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <i className="ti ti-upload" style={{ fontSize: 16, color: "#00F5FF" }} aria-hidden="true" />
+          Document analyzer — drop a carrier arrival notice
+          {phase === "done" && (
+            <span style={{
+              fontSize: 10, padding: "2px 7px", borderRadius: 99,
+              background: result?.status === "exception" ? "rgba(167,139,250,0.15)" : "rgba(74,222,128,0.12)",
+              color: result?.status === "exception" ? "#A78BFA" : "#4ADE80",
+              border: `0.5px solid ${result?.status === "exception" ? "#A78BFA" : "#4ADE80"}`,
+              fontWeight: 600, letterSpacing: "0.05em",
+            }}>
+              {result?.status === "exception" ? "EXCEPTION" : "ROUTED"}
+            </span>
+          )}
+        </span>
+        <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {phase === "done" && (
+            <button
+              onClick={e => { e.stopPropagation(); reset(); }}
+              style={{ fontSize: 11, padding: "3px 8px", background: "var(--surface-container)", border: "0.5px solid var(--outline-variant)", borderRadius: 6, color: "var(--on-surface-muted)", cursor: "pointer" }}
+            >Clear</button>
+          )}
+          <i className={`ti ti-chevron-${open ? "up" : "down"}`} style={{ fontSize: 14, color: "var(--on-surface-muted)" }} aria-hidden="true" />
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ padding: "0 16px 16px", borderTop: "0.5px solid var(--outline-dim)" }}>
+          {/* Drop zone */}
+          {phase === "idle" && (
+            <div
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onClick={() => inputRef.current?.click()}
+              style={{
+                marginTop: 12,
+                border: `1.5px dashed ${dragging ? "#00F5FF" : "var(--outline-variant)"}`,
+                borderRadius: 10,
+                padding: "28px 20px",
+                textAlign: "center",
+                cursor: "pointer",
+                background: bgColor,
+                transition: "all 0.2s",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+              }}
+            >
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: dragging ? "rgba(0,245,255,0.12)" : "var(--surface-container)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.2s",
+              }}>
+                <i className="ti ti-file-arrow-up" style={{ fontSize: 24, color: dragging ? "#00F5FF" : "var(--on-surface-muted)" }} aria-hidden="true" />
+              </div>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: "var(--on-surface)", margin: 0 }}>
+                  {dragging ? "Release to analyze" : "Drop a carrier document here"}
+                </p>
+                <p style={{ fontSize: 12, color: "var(--on-surface-muted)", margin: "4px 0 0" }}>
+                  Supports .txt · .eml · .log · .msg — or{" "}
+                  <span style={{ color: "#00F5FF", textDecoration: "underline" }}>click to browse</span>
+                </p>
+              </div>
+              <input ref={inputRef} type="file" accept=".txt,.eml,.log,.msg,.csv" onChange={onInputChange} style={{ display: "none" }} aria-label="Upload arrival notice document" />
+            </div>
+          )}
+
+          {/* Analysis terminal */}
+          {(phase !== "idle") && (
+            <div style={{ marginTop: 12 }}>
+              {fileName && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  fontSize: 12, color: "var(--on-surface-muted)", marginBottom: 8,
+                }}>
+                  <i className="ti ti-file" style={{ fontSize: 13 }} aria-hidden="true" />
+                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--on-surface)" }}>{fileName}</span>
+                  {phase === "done" && (
+                    <span style={{ marginLeft: "auto", fontSize: 11, color: "#00F5FF", cursor: "pointer" }} onClick={reset}>← Analyze another</span>
+                  )}
+                </div>
+              )}
+
+              {/* Log terminal */}
+              <div
+                ref={logRef}
+                style={{
+                  background: "#0A1010",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  minHeight: 120,
+                  maxHeight: 200,
+                  overflowY: "auto",
+                  marginBottom: 12,
+                  border: "0.5px solid var(--outline-dim)",
+                }}
+              >
+                {logLines.length === 0 && <span style={{ color: "#3A494A" }}>// reading document…</span>}
+                {logLines.map((l, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, color: l.color, marginBottom: 3, animation: "fade-up 0.2s ease both" }}>
+                    <i className={`ti ${l.icon}`} style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+                    <span>{l.msg}</span>
+                  </div>
+                ))}
+                {(phase === "reading" || phase === "analyzing") && (
+                  <div style={{ color: "#00F5FF", marginTop: 4 }}>▋</div>
+                )}
+              </div>
+
+              {/* Result summary cards */}
+              {phase === "done" && result && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {[
+                    { icon: "ti-ship",     label: "Vessel",     val: result.vessel,    ok: !!result.vessel },
+                    { icon: "ti-box",      label: "Container",  val: result.container, ok: /^[A-Z]{4}\d{6,7}$/.test(result.container ?? ""), mono: true },
+                    { icon: "ti-anchor",   label: "POD",        val: result.pod,        ok: !!result.pod },
+                    { icon: "ti-clock",    label: "Free time",  val: result.deadline,  ok: !!result.deadline },
+                  ].map((f, i) => (
+                    <div key={i} style={{
+                      background: f.ok ? "rgba(74,222,128,0.06)" : "rgba(248,113,113,0.06)",
+                      border: `0.5px solid ${f.ok ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`,
+                      borderRadius: 8, padding: "10px 12px",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                        <i className={`ti ${f.icon}`} style={{ fontSize: 13, color: f.ok ? "#4ADE80" : "#F87171" }} aria-hidden="true" />
+                        <span style={{ fontSize: 10, color: "var(--on-surface-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.label}</span>
+                      </div>
+                      <div style={{
+                        fontSize: 12, fontWeight: 500,
+                        fontFamily: f.mono ? "var(--font-mono)" : "inherit",
+                        color: f.ok ? "var(--on-surface)" : "#F87171",
+                        fontStyle: f.val ? "normal" : "italic",
+                      }}>
+                        {f.val ?? "not found"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Routing badge */}
+              {phase === "done" && result && (
+                <div style={{
+                  marginTop: 10,
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "10px 14px",
+                  background: result.status === "exception" ? "rgba(167,139,250,0.08)" : "rgba(74,222,128,0.08)",
+                  border: `0.5px solid ${result.status === "exception" ? "rgba(167,139,250,0.25)" : "rgba(74,222,128,0.25)"}`,
+                  borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  color: result.status === "exception" ? "#A78BFA" : "#4ADE80",
+                }}>
+                  <i className={`ti ${result.status === "exception" ? "ti-alert-triangle" : "ti-circle-check"}`} style={{ fontSize: 15 }} aria-hidden="true" />
+                  {result.status === "exception"
+                    ? `Routed to exception queue — ${result.failures?.length ?? 0} validation issue(s) found. Assign to compliance officer.`
+                    : `Routed to dashboard queue — all fields validated. ${result.daysLeft !== null ? `${result.daysLeft} days until free time expires.` : ""}`
+                  }
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EmailSimulator({ onIngest }) {
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -572,6 +929,11 @@ export default function App() {
         <StatCard icon="ti-alert-triangle" label="Exceptions"     value={totalExceptions}   accent="#7C3AED" />
         <StatCard icon="ti-flame"          label="Critical (≤2d)" value={totalCritical}     accent="#DC2626" />
         <StatCard icon="ti-clock"          label="Avg free days"  value={`${avgDays}d`}     accent="#D97706" />
+      </div>
+
+      {/* ── Document drop zone ── */}
+      <div style={{ marginBottom: 12 }}>
+        <DocumentDropZone onIngest={handleIngest} />
       </div>
 
       {/* ── Email simulator ── */}
