@@ -36,11 +36,11 @@ function extractLogisticsFields(text) {
     vessel_name: [
       // Standard: "Vessel Name: MSC MAYA"
       /(?:Vessel(?:\s*Name)?|V\/V)\s*[:\-]\s*([A-Z0-9][A-Z0-9 \-]+?)(?:\n|,|;|\(|$)/im,
-      // Carrier-prefix pattern — works for all major liners in any layout
-      // Matches: "MSC GULSUN", "MAERSK ELBA", "EVER GIVEN", "CMA CGM MARCO POLO"
-      /\b((?:MSC|MAERSK|EVER|CMA\s+CGM?|ONE|ZIM|HAPAG|HL|YM\s+\w+|COSCO|YANG\s+MING|APL|OOCL|PIL|HMM|HYUNDAI)\s+[A-Z][A-Z]{2,}(?:\s+[A-Z]{2,})*)/i,
-      // Tabular: "VESSEL NAME" header then value on next line, skip BL number prefix
-      /VESSEL\s*NAME[^\n]*\n\w+\s+([A-Z]{3,}(?:\s+[A-Z]{2,})+?)(?:\s{2,}|\n|$)/im,
+      // Carrier-prefix: "MSC GULSUN", "MAERSK ELBA", "EVER GIVEN", "CMA CGM MARCO POLO"
+      // Stop before tokens that contain digits (voyage numbers like GUL831W)
+      /\b((?:MSC|MAERSK|EVER|CMA\s+CGM?|ONE|ZIM|HAPAG|HL|YM\s+\w+|COSCO|YANG\s+MING|APL|OOCL|PIL|HMM|HYUNDAI)\s+[A-Z]{2,}(?:\s+(?![A-Z]*\d)[A-Z]{2,})*)/i,
+      // Tabular: "VESSEL NAME" header, next line starts with BL number then vessel name
+      /VESSEL\s*NAME[^\n]*\n[A-Z0-9]+\s+([A-Z]{3,}(?:\s+(?![A-Z]*\d)[A-Z]{2,})+?)(?:\s{2,}|\n|$)/im,
     ],
     container_id: [
       /\b([A-Z]{4}\s?\d{6,7})\b/,
@@ -50,11 +50,10 @@ function extractLogisticsFields(text) {
       /(?:Port\s*of\s*Discharge|POD|Discharge\s*Port)\s*[:\-]\s*([A-Z][A-Za-z\s,]+?)(?:\n|;|$)/im,
       // Tabular same-line: "PORT OF DISCHARGE   NORFOLK, VA, USA"
       /PORT\s+OF\s+DISCHARGE\s+([A-Z][A-Za-z\s,\.]+?)(?:\s{2,}|\n|EST\.|ETA|VOYAGE|$)/im,
-      // Tabular multi-line: header row then value row
-      // Header: "PORT OF LOADING  PORT OF DISCHARGE  EST. ARRIVAL"
-      // Values: "FELIXSTOWE, UK   NORFOLK, VA, USA   July 10, 2025"
-      // Skip the PORT OF LOADING value ("CITY, COUNTRY ") then capture POD
-      /PORT\s+OF\s+DISCHARGE[^\n]*\n(?:[A-Z][A-Za-z ,\.]+?,\s*[A-Z]{2,}\s+)?([A-Z][A-Za-z\s,\.]{3,40}?)(?:\s{2,}|\n|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d\d|$)/im,
+      // Tabular multi-line — header row contains PORT OF LOADING before PORT OF DISCHARGE
+      // Value row: "FELIXSTOWE, UK  NORFOLK, VA, USA  July 10, 2025"
+      // Skip first City,Country (POL) then capture the second (POD), stop before a date
+      /PORT\s+OF\s+DISCHARGE[^\n]*\n[A-Z][A-Za-z]+,\s*\w+\s+([A-Z][A-Za-z\s,\.]+?)(?:\s{2,}|\n|(?:Jan|Feb|Mar|Apr|May|Jun|July|Aug|Sep|Oct|Nov|Dec)\s+\d|\d{1,2}[\/\-]\d|$)/im,
     ],
     free_time_deadline: [
       // Standard: "Free Time Expires: 2025-08-15" or "Free Time Deadline: Aug 15, 2025"
