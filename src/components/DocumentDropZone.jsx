@@ -34,8 +34,8 @@ async function extractTextFromPDF(arrayBuffer) {
 function extractLogisticsFields(text) {
   const patterns = {
     vessel_name: [
-      // Standard: "Vessel Name: MSC MAYA"
-      /(?:Vessel(?:\s*Name)?|V\/V)\s*[:\-]\s*([A-Z0-9][A-Z0-9 \-]+?)(?:\n|,|;|\(|$)/im,
+      // Standard: "Vessel Name: MSC MAYA" or "vessel : MSC SOMETHING V.112E"
+      /(?:Vessel(?:\s*Name)?|V\/V)\s*[:\-]\s*([A-Z0-9][A-Z0-9 \.\-]+?)(?:\n|,|;|\(|$)/im,
       // Carrier-prefix: "MSC GULSUN", "MAERSK ELBA", "EVER GIVEN", "CMA CGM MARCO POLO"
       // Stop before tokens that contain digits (voyage numbers like GUL831W)
       /\b((?:MSC|MAERSK|EVER|CMA\s+CGM?|ONE|ZIM|HAPAG|HL|YM\s+\w+|COSCO|YANG\s+MING|APL|OOCL|PIL|HMM|HYUNDAI)\s+[A-Z]{2,}(?:\s+(?![A-Z]*\d)[A-Z]{2,})*)/i,
@@ -46,14 +46,13 @@ function extractLogisticsFields(text) {
       /\b([A-Z]{4}\s?\d{6,7})\b/,
     ],
     port_of_discharge: [
-      // Standard: "Port of Discharge: NEW YORK" or "POD: SAVANNAH"
-      /(?:Port\s*of\s*Discharge|POD|Discharge\s*Port)\s*[:\-]\s*([A-Z][A-Za-z\s,]+?)(?:\n|;|$)/im,
+      // Standard: "Port of Discharge: NEW YORK" or "POD : NHAVA SHEVA / JNPT"
+      /(?:Port\s*of\s*Discharge|POD|Discharge\s*Port)\s*[:\-]\s*([A-Z][A-Za-z\s,\/\.]+?)(?:\n|;|$)/im,
       // Tabular same-line: "PORT OF DISCHARGE   NORFOLK, VA, USA"
-      /PORT\s+OF\s+DISCHARGE\s+([A-Z][A-Za-z\s,\.]+?)(?:\s{2,}|\n|EST\.|ETA|VOYAGE|$)/im,
-      // Tabular multi-line — header row contains PORT OF LOADING before PORT OF DISCHARGE
-      // Value row: "FELIXSTOWE, UK  NORFOLK, VA, USA  July 10, 2025"
+      /PORT\s+OF\s+DISCHARGE\s+([A-Z][A-Za-z\s,\.\/]+?)(?:\s{2,}|\n|EST\.|ETA|VOYAGE|$)/im,
+      // Tabular multi-line — value row: "FELIXSTOWE, UK  NORFOLK, VA, USA  July 10, 2025"
       // Skip first City,Country (POL) then capture the second (POD), stop before a date
-      /PORT\s+OF\s+DISCHARGE[^\n]*\n[A-Z][A-Za-z]+,\s*\w+\s+([A-Z][A-Za-z\s,\.]+?)(?:\s{2,}|\n|(?:Jan|Feb|Mar|Apr|May|Jun|July|Aug|Sep|Oct|Nov|Dec)\s+\d|\d{1,2}[\/\-]\d|$)/im,
+      /PORT\s+OF\s+DISCHARGE[^\n]*\n[A-Z][A-Za-z]+,\s*\w+\s+([A-Z][A-Za-z\s,\.\/]+?)(?:\s{2,}|\n|(?:Jan|Feb|Mar|Apr|May|Jun|July|Aug|Sep|Oct|Nov|Dec)\s+\d|\d{1,2}[\/\-]\d|$)/im,
     ],
     free_time_deadline: [
       // Standard: "Free Time Expires: 2025-08-15" or "Free Time Deadline: Aug 15, 2025"
@@ -71,7 +70,8 @@ function extractLogisticsFields(text) {
     for (const pat of pats) {
       const m = text.match(pat)
       if (m) {
-        val = m[1].trim()
+        // Use capture group 1 (named extraction) or full match group 1
+        val = (m[1] ?? m[0]).trim().replace(/\s+/g, ' ')  // normalise whitespace
         if (field === 'container_id') val = val.replace(/\s/g, '')
         break
       }
@@ -118,6 +118,9 @@ function incrementUsage() {
   localStorage.setItem(STORAGE_KEY, String(next))
   return next
 }
+function clearUsage() {
+  localStorage.removeItem(STORAGE_KEY)
+}
 
 // ── DocumentDropZone component ────────────────────────────────────────────────
 export function DocumentDropZone({ onIngest }) {
@@ -133,6 +136,36 @@ export function DocumentDropZone({ onIngest }) {
 
   const remaining = DEMO_LIMIT - usageCount
   const isLocked  = usageCount >= DEMO_LIMIT
+
+  // ── Reset mechanisms (no DevTools needed) ──────────────────────────────────
+  // 1. URL param: navigate to /?reset to wipe the counter before a demo
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('reset')) {
+      clearUsage()
+      setUsageCount(0)
+      setPhase('idle')
+      // Remove ?reset from URL without reloading
+      const clean = window.location.pathname
+      window.history.replaceState({}, '', clean)
+    }
+  }, [])
+
+  // 2. Shift+R anywhere on the page resets the counter (admin shortcut)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.shiftKey && e.key === 'R') {
+        clearUsage()
+        setUsageCount(0)
+        setPhase('idle')
+        setFileName(null)
+        setLogLines([])
+        setResult(null)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   // Auto-scroll terminal log
   useEffect(() => {
@@ -346,6 +379,7 @@ export function DocumentDropZone({ onIngest }) {
               borderRadius: 10, padding: '28px 20px', textAlign: 'center',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
             }}>
+              {/* Lock icon */}
               <div style={{
                 width: 52, height: 52, borderRadius: 14,
                 background: 'rgba(248,113,113,0.08)',
