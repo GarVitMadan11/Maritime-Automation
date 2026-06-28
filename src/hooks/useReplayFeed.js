@@ -24,6 +24,7 @@ export function useReplayFeed(baseRecords, { idleMs = 8000, intervalMs = 4000 } 
 
   const startReplay = () => {
     if (replayTimer.current) return // already running
+    if (!baseRecords || baseRecords.length === 0) return // safety check
     setIsReplaying(true)
     replayTimer.current = setInterval(() => {
       setDisplayRecords(prev => {

@@ -6,15 +6,14 @@ import { PipelineTerminal }   from '../components/PipelineTerminal.jsx'
 import { ExceptionGate }      from '../components/ExceptionGate.jsx'
 import { RecordDetail }       from '../components/RecordDetail.jsx'
 import { DocumentDropZone }   from '../components/DocumentDropZone.jsx'
-import { useReplayFeed }      from '../hooks/useReplayFeed.js'
+
 
 export function Dashboard({ records, stats, clientName, onIngest, onResolve, onDismiss }) {
   const [selected, setSelected] = useState(null)
   const [filter,   setFilter]   = useState('all')
   const [search,   setSearch]   = useState('')
 
-  // GAP 2 — Replay mode: keeps the feed alive when idle
-  const { displayRecords, isReplaying } = useReplayFeed(records)
+
 
   const exceptions = records.filter(r => r.status === 'exception')
 
@@ -38,14 +37,14 @@ export function Dashboard({ records, stats, clientName, onIngest, onResolve, onD
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' }}>
           <div style={{ minHeight: 400, display: 'flex', flexDirection: 'column' }}>
             <LiveFeed
-              records={displayRecords}
+              records={records}
               selected={selected}
               onSelect={setSelected}
               filter={filter}
               onFilterChange={setFilter}
               search={search}
               onSearchChange={setSearch}
-              isReplaying={isReplaying}
+              isReplaying={false}
             />
           </div>
           {/* Right column: Document Drop Zone + Pipeline Terminal stacked */}

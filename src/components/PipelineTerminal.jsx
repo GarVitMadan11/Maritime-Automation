@@ -14,6 +14,7 @@ export function PipelineTerminal({ onIngest }) {
 
   const runSimulation = async () => {
     if (running) return
+    if (!DEMO_EMAILS || DEMO_EMAILS.length === 0) return
     const email = DEMO_EMAILS[demoIdx % DEMO_EMAILS.length]
     setRunning(true)
     setLogs([])
@@ -119,20 +120,20 @@ export function PipelineTerminal({ onIngest }) {
       {/* Run button */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--outline-dim)', flexShrink: 0 }}>
         <div style={{ fontSize: 10, color: 'var(--on-surface-muted)', marginBottom: 8, letterSpacing: '0.05em' }}>
-          NEXT: {DEMO_EMAILS[demoIdx % DEMO_EMAILS.length]?.subject ?? '—'}
+          NEXT: {DEMO_EMAILS.length > 0 ? DEMO_EMAILS[demoIdx % DEMO_EMAILS.length]?.subject : '—'}
         </div>
         <button
           onClick={runSimulation}
-          disabled={running}
+          disabled={running || DEMO_EMAILS.length === 0}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
             padding: '9px 0',
-            background: running ? 'var(--surface-container)' : 'var(--primary)',
-            color: running ? 'var(--on-surface-muted)' : 'var(--on-primary)',
+            background: (running || DEMO_EMAILS.length === 0) ? 'var(--surface-container)' : 'var(--primary)',
+            color: (running || DEMO_EMAILS.length === 0) ? 'var(--on-surface-muted)' : 'var(--on-primary)',
             border: 'none', borderRadius: 'var(--radius-md)',
             fontSize: 12, fontWeight: 600, letterSpacing: '0.03em',
             transition: 'all 0.2s',
-            cursor: running ? 'not-allowed' : 'pointer',
+            cursor: (running || DEMO_EMAILS.length === 0) ? 'not-allowed' : 'pointer',
           }}
         >
           <i className={`ti ${running ? 'ti-loader-2' : 'ti-player-play-filled'}`}
